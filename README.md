@@ -29,8 +29,8 @@
 安装基本工具
 
 ```shell
-sudo apt-get update
-sudo apt-get install -y wget cmake build-essential unzip git
+sudo yum makecache
+sudo yum install -y wget cmake gcc-c++ make unzip git
 ```
 
 ## 编译指令

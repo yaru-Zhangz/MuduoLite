@@ -9,31 +9,31 @@
 class Channel;
 class EventLoop;
 
-// muduo库中多路事件分发器的核心IO复用模块
+/*
+Poller 负责监听所有注册的文件描述，并在有事件发生时收集活跃的 Channel，通知 EventLoop 进行分发和处理。
+Poller 维护 fd 到 Channel 的映射关系，负责 Channel 的注册、更新和移除，确保时间能否被正确分发到对应的回调
+*/
 class Poller
 {
 public:
-    using ChannelList = std::vector<Channel *>;
+    using ChannelList = std::vector<Channel*>;
 
     Poller(EventLoop *loop);
     virtual ~Poller() = default;
 
-    // 给所有IO复用保留统一的接口
     virtual Timestamp poll(int timeoutMs, ChannelList *activeChannels) = 0;
     virtual void updateChannel(Channel *channel) = 0;
     virtual void removeChannel(Channel *channel) = 0;
 
-    // 判断参数channel是否在当前的Poller当中
     bool hasChannel(Channel *channel) const;
 
-    // EventLoop可以通过该接口获取默认的IO复用的具体实现
+    // 工厂方法，创建默认的 IO 复用器实现（如 EpollPoller）
     static Poller *newDefaultPoller(EventLoop *loop);
 
 protected:
-    // map的key:sockfd value:sockfd所属的channel通道类型
-    using ChannelMap = std::unordered_map<int, Channel *>;
+    using ChannelMap = std::unordered_map<int, Channel*>;
     ChannelMap channels_;
 
 private:
-    EventLoop *ownerLoop_; // 定义Poller所属的事件循环EventLoop
+    EventLoop *ownerLoop_; 
 };

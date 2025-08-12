@@ -6,14 +6,15 @@
 #include "Logger.h"
 #include "Channel.h"
 
-const int kNew = -1;    // 某个channel还没添加至Poller          // channel的成员index_初始化为-1
-const int kAdded = 1;   // 某个channel已经添加至Poller
-const int kDeleted = 2; // 某个channel已经从Poller删除
+const int kNew = -1;    // 表示 Channel 尚未注册到 Poller，index_ 初始化为 -1
+const int kAdded = 1;   // 表示 Channel 已经注册到 Poller
+const int kDeleted = 2; // 表示 Channel 已经从 Poller 移除
 
+// 构造函数，创建 epoll 实例并初始化事件列表
 EPollPoller::EPollPoller(EventLoop *loop)
     : Poller(loop)
-    , epollfd_(::epoll_create1(EPOLL_CLOEXEC)) 
-    , events_(kInitEventListSize) // vector<epoll_event>(16)
+    , epollfd_(::epoll_create1(EPOLL_CLOEXEC)) // 创建 epoll 文件描述符
+    , events_(kInitEventListSize) 
 {
     if (epollfd_ < 0)
     {
@@ -28,29 +29,30 @@ EPollPoller::~EPollPoller()
 
 Timestamp EPollPoller::poll(int timeoutMs, ChannelList *activeChannels)
 {
-    // 由于频繁调用poll 实际上应该用LOG_DEBUG输出日志更为合理 当遇到并发场景 关闭DEBUG日志提升效率
+    // 输出当前监听的 fd 数量
     LOG_INFO("func=%s => fd total count:%lu\n", __FUNCTION__, channels_.size());
 
+    // 调用 epoll_wait 等待事件发生，events_ 存储所有发生的事件
     int numEvents = ::epoll_wait(epollfd_, &*events_.begin(), static_cast<int>(events_.size()), timeoutMs);
     int saveErrno = errno;
     Timestamp now(Timestamp::now());
 
     if (numEvents > 0)
     {
-        LOG_INFO("%d events happend\n", numEvents); // LOG_DEBUG最合理
-        fillActiveChannels(numEvents, activeChannels);
-        if (numEvents == events_.size()) // 扩容操作
+        LOG_INFO("%d events happend\n", numEvents); 
+        fillActiveChannels(numEvents, activeChannels);  // 将活跃事件填充到 activeChannels 列表
+        if (numEvents == events_.size()) 
         {
             events_.resize(events_.size() * 2);
         }
     }
     else if (numEvents == 0)
     {
-        LOG_DEBUG("%s timeout!\n", __FUNCTION__);
+        LOG_DEBUG("%s timeout!\n", __FUNCTION__); // 超时无事件发生
     }
     else
     {
-        if (saveErrno != EINTR)
+        if (saveErrno != EINTR)  // 非中断错误时，输出错误日志
         {
             errno = saveErrno;
             LOG_ERROR("EPollPoller::poll() error!");
@@ -59,7 +61,6 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList *activeChannels)
     return now;
 }
 
-// channel update remove => EventLoop updateChannel removeChannel => Poller updateChannel removeChannel
 void EPollPoller::updateChannel(Channel *channel)
 {
     const int index = channel->index();

@@ -4,67 +4,58 @@
 #include "EventLoop.h"
 #include "Logger.h"
 
-const int Channel::kNoneEvent = 0; //空事件
-const int Channel::kReadEvent = EPOLLIN | EPOLLPRI; //读事件
-const int Channel::kWriteEvent = EPOLLOUT; //写事件
+// 定义 Channel 支持的事件类型常量
+const int Channel::kNoneEvent = 0; // 空事件
+const int Channel::kReadEvent = EPOLLIN | EPOLLPRI; // 读事件
+const int Channel::kWriteEvent = EPOLLOUT; // 写事件
 
-// EventLoop: ChannelList Poller
+// 初始化 Channel 对象，绑定所属事件循环和文件描述符，并初始化成员变量
 Channel::Channel(EventLoop *loop, int fd)
     : loop_(loop)
     , fd_(fd)
     , events_(0)
     , revents_(0)
     , index_(-1)
-    , tied_(false)
-{
+    , tied_(false) {
 }
 
-Channel::~Channel()
-{
+Channel::~Channel() {
 }
 
-// channel的tie方法什么时候调用过?  TcpConnection => channel
-/**
- * TcpConnection中注册了Channel对应的回调函数，传入的回调函数均为TcpConnection
- * 对象的成员方法，因此可以说明一点就是：Channel的结束一定晚于TcpConnection对象！
- * 此处用tie去解决TcpConnection和Channel的生命周期时长问题，从而保证了Channel对象能够在
- * TcpConnection销毁前销毁。
- **/
+
+// 绑定一个智能指针对象，用于保护 Channel 生命周期，防止回调过程中被提前销毁
 void Channel::tie(const std::shared_ptr<void> &obj)
 {
-    tie_ = obj;
-    tied_ = true;
-}
-//update 和remove => EpollPoller 更新channel在poller中的状态
-/**
- * 当改变channel所表示的fd的events事件后，update负责再poller里面更改fd相应的事件epoll_ctl
- **/
-void Channel::update()
-{
-    // 通过channel所属的eventloop，调用poller的相应方法，注册fd的events事件
-    loop_->updateChannel(this);
+    tie_ = obj;    // 保存弱引用指针
+    tied_ = true;  // 标记已绑定保护对象
 }
 
-// 在channel所属的EventLoop中把当前的channel删除掉
+// 通知 Poller 更新当前 Channel 关注的事件类型
+void Channel::update()
+{
+    loop_->updateChannel(this);     // 通过所属事件循环对象，调用 Poller 的更新方法
+}
+
 void Channel::remove()
 {
     loop_->removeChannel(this);
 }
 
+// 处理事件分发入口，根据是否绑定了生命周期保护对象决定是否执行回调
 void Channel::handleEvent(Timestamp receiveTime)
 {
-    if (tied_)
+    if (tied_) // 如果已绑定保护对象
     {
-        std::shared_ptr<void> guard = tie_.lock();
+        std::shared_ptr<void> guard = tie_.lock(); // 尝试提升为强引用，确保对象未被销毁
         if (guard)
         {
-            handleEventWithGuard(receiveTime);
+            handleEventWithGuard(receiveTime); // 对象有效时，执行事件分发
         }
-        // 如果提升失败了 就不做任何处理 说明Channel的TcpConnection对象已经不存在了
+        // 对象已被销毁时，不做任何处理，防止访问非法内存
     }
     else
     {
-        handleEventWithGuard(receiveTime);
+        handleEventWithGuard(receiveTime); // 未绑定保护对象时，直接执行事件分发
     }
 }
 

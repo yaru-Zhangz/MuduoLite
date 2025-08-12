@@ -6,13 +6,6 @@
 #include "Poller.h"
 #include "Timestamp.h"
 
-/**
- * epoll的使用:
- * 1. epoll_create
- * 2. epoll_ctl (add, mod, del)
- * 3. epoll_wait
- **/
-
 class Channel;
 
 class EPollPoller : public Poller
@@ -27,15 +20,15 @@ public:
     void removeChannel(Channel *channel) override;
 
 private:
-    static const int kInitEventListSize = 16;
+    static const int kInitEventListSize = 16;   // 初始化 epoll 事件列表的容量
 
-    // 填写活跃的连接
+    // 将 epoll_wait 检测到的活跃事件填充到 activeChannels 列表
     void fillActiveChannels(int numEvents, ChannelList *activeChannels) const;
-    // 更新channel通道 其实就是调用epoll_ctl
+    // 封装 epoll_ctl 操作，更新 Channel 的事件类型
     void update(int operation, Channel *channel);
 
-    using EventList = std::vector<epoll_event>; // C++中可以省略struct 直接写epoll_event即可
+    using EventList = std::vector<epoll_event>; // 定义 epoll_event 的集合类型
 
-    int epollfd_;      // epoll_create创建返回的fd保存在epollfd_中
-    EventList events_; // 用于存放epoll_wait返回的所有发生的事件的文件描述符事件集
+    int epollfd_;      // epoll 实例的文件描述符，由 epoll_create 创建
+    EventList events_; // 存储 epoll_wait 检测到的所有事件
 };

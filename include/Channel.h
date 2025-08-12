@@ -15,7 +15,7 @@ class EventLoop;
 class Channel : noncopyable
 {
 public:
-    using EventCallback = std::function<void()>; // muduo仍使用typedef
+    using EventCallback = std::function<void()>;
     using ReadEventCallback = std::function<void(Timestamp)>;
 
     Channel(EventLoop *loop, int fd);

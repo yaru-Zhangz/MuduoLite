@@ -8,13 +8,12 @@
 
 ## 开发环境
 
-* linux kernel version5.15.0-113-generic (ubuntu 22.04.6)
-* gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
-* cmake version 3.22
+* 操作系统：CentOS Linux 8
+* Linux 内核版本：4.18.0-348.7.1.el8_5.x86_64
+* gcc 版本：13.2.0
+* cmake 版本：3.26.4
 
 ## 并发模型
-
-![image.png](https://cdn.nlark.com/yuque/0/2022/png/26752078/1670853134528-c88d27f2-10a2-46d3-b308-48f7632a2f09.png?x-oss-process=image%2Fresize%2Cw_937%2Climit_0)
 
 项目采用主从 多Reactor多线程 模型，MainReactor 只负责监听派发新连接，在 MainReactor 中通过 Acceptor 接收新连接并通过设计好的轮询算法派发给 SubReactor，SubReactor 负责此连接的读写事件。
 
@@ -34,13 +33,12 @@ sudo apt-get update
 sudo apt-get install -y wget cmake build-essential unzip git
 ```
 
-
 ## 编译指令
 
 
-进入到muduo-core文件
+进入到muduo-lite文件
 ```shell
-cd muduo-core
+cd muduo-lite
 ```
 
 创建build文件夹，并且进入build文件:

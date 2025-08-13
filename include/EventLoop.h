@@ -18,45 +18,39 @@ class EventLoop : noncopyable
 {
 public:
     using Functor = std::function<void()>;
+    using ChannelList = std::vector<Channel*>;
 
     EventLoop();
     ~EventLoop();
 
-    // 开启事件循环
-    void loop();
-    // 退出事件循环
-    void quit();
+    void loop();        // 开启事件循环
+    void quit();        // 退出事件循环
 
-    Timestamp pollReturnTime() const { return pollRetureTime_; }
+    Timestamp pollReturnTime() const { return pollRetureTime_; }    // 获取最近一次事件检测的时间戳
 
-    // 在当前loop中执行
-    void runInLoop(Functor cb);
-    // 把上层注册的回调函数cb放入队列中 唤醒loop所在的线程执行cb
-    void queueInLoop(Functor cb);
 
-    // 通过eventfd唤醒loop所在的线程
-    void wakeup();
+    void runInLoop(Functor cb);     // 在当前时间循环线程中立即执行回调
+    void queueInLoop(Functor cb);   // 将回调函数加入队列，稍后在事件循环线程中执行
 
-    // EventLoop的方法 => Poller的方法
-    void updateChannel(Channel *channel);
-    void removeChannel(Channel *channel);
-    bool hasChannel(Channel *channel);
+    void wakeup();  // 通过eventfd唤醒事件循环线程，防止长时间阻塞
 
-    // 判断EventLoop对象是否在自己的线程里
-    bool isInLoopThread() const { return threadId_ == CurrentThread::tid(); } // threadId_为EventLoop创建时的线程id CurrentThread::tid()为当前线程id
+    void updateChannel(Channel *channel); // 更新 Channel 的关注事件
+    void removeChannel(Channel *channel); // 移除 Channel，不再监听
+    bool hasChannel(Channel *channel);    // 检查 Channel 是否已被管理
+
+    // 判断当前代码是否运行在事件循环所属线程，保证线程安全
+    bool isInLoopThread() const { return threadId_ == CurrentThread::tid(); }
 
 private:
-    void handleRead();        // 给eventfd返回的文件描述符wakeupFd_绑定的事件回调 当wakeup()时 即有事件发生时 调用handleRead()读wakeupFd_的8字节 同时唤醒阻塞的epoll_wait
-    void doPendingFunctors(); // 执行上层回调
+    void handleRead();        // 处理 eventfd 读事件，响应唤醒操作
+    void doPendingFunctors(); // 执行队列中的所有待处理回调
 
-    using ChannelList = std::vector<Channel *>;
+    std::atomic_bool looping_; // 标记事件循环是否正在运行
+    std::atomic_bool quit_;    // 标记是否请求退出事件循环
 
-    std::atomic_bool looping_; // 原子操作 底层通过CAS实现
-    std::atomic_bool quit_;    // 标识退出loop循环
+    const pid_t threadId_; // 记录事件循环所属线程的 id
 
-    const pid_t threadId_; // 记录当前EventLoop是被哪个线程id创建的 即标识了当前EventLoop的所属线程id
-
-    Timestamp pollRetureTime_; // Poller返回发生事件的Channels的时间点
+    Timestamp pollRetureTime_; // 记录最近一次 Poller 检测事件的时间点
     std::unique_ptr<Poller> poller_;
 
     int wakeupFd_; // 作用：当mainLoop获取一个新用户的Channel 需通过轮询算法选择一个subLoop 通过该成员唤醒subLoop处理Channel

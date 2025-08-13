@@ -32,3 +32,21 @@ private:
     int epollfd_;      // epoll 实例的文件描述符，由 epoll_create 创建
     EventList events_; // 存储 epoll_wait 检测到的所有事件
 };
+
+/*
+
+typedef union epoll_data {
+    void        *ptr;    // 用户自定义指针，常用于存放对象指针（如 Channel*）
+    int         fd;      // 文件描述符
+    uint32_t    u32;     // 32位无符号整数
+    uint64_t    u64;     // 64位无符号整数
+} epoll_data_t;
+
+struct epoll_event {
+    uint32_t     events; // 事件类型掩码，如 EPOLLIN、EPOLLOUT、EPOLLERR 等
+    epoll_data_t data;   // 用户数据，可以存放 fd、指针等
+};
+
+注册事件时，将events设置为关注的事件类型，将data.ptr设置为Channel指针
+事件发生时，epoll_wait返回的epoll_event数组中，每个元素的events表示发生的事件类型
+*/

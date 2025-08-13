@@ -94,7 +94,6 @@ void EPollPoller::updateChannel(Channel *channel)
     }
 }
 
-// 从Poller中删除channel
 void EPollPoller::removeChannel(Channel *channel)
 {
     int fd = channel->fd();
@@ -110,7 +109,6 @@ void EPollPoller::removeChannel(Channel *channel)
     channel->set_index(kNew);
 }
 
-// 填写活跃的连接
 void EPollPoller::fillActiveChannels(int numEvents, ChannelList *activeChannels) const
 {
     for (int i = 0; i < numEvents; ++i)
@@ -121,7 +119,6 @@ void EPollPoller::fillActiveChannels(int numEvents, ChannelList *activeChannels)
     }
 }
 
-// 更新channel通道 其实就是调用epoll_ctl add/mod/del
 void EPollPoller::update(int operation, Channel *channel)
 {
     epoll_event event;

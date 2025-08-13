@@ -9,15 +9,13 @@
 #include "Channel.h"
 #include "Poller.h"
 
-// 防止一个线程创建多个EventLoop
+ // 线程局部变量，记录当前线程的 EventLoop 实例
 __thread EventLoop *t_loopInThisThread = nullptr;
 
-// 定义默认的Poller IO复用接口的超时时间
-const int kPollTimeMs = 10000; // 10000毫秒 = 10秒钟
+const int kPollTimeMs = 10000;  // Poller 轮询超时时间，单位毫秒
 
 /* 创建线程之后主线程和子线程谁先运行是不确定的。
  * 通过一个eventfd在线程之间传递数据的好处是多个线程无需上锁就可以实现同步。
- * eventfd支持的最低内核版本为Linux 2.6.27,在2.6.26及之前的版本也可以使用eventfd，但是flags必须设置为0。
  * 函数原型：
  *     #include <sys/eventfd.h>
  *     int eventfd(unsigned int initval, int flags);
@@ -27,10 +25,9 @@ const int kPollTimeMs = 10000; // 10000毫秒 = 10秒钟
  *             EFD_CLOEXEC，执行fork的时候，在父进程中的描述符会自动关闭，子进程中的描述符保留。
  * 场景：
  *     eventfd可以用于同一个进程之中的线程之间的通信。
- *     eventfd还可以用于同亲缘关系的进程之间的通信。
- *     eventfd用于不同亲缘关系的进程之间通信的话需要把eventfd放在几个进程共享的共享内存中（没有测试过）。
  */
-// 创建wakeupfd 用来notify唤醒subReactor处理新来的channel
+
+// 创建 eventfd，用于事件循环间的唤醒通知
 int createEventfd()
 {
     int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
@@ -122,20 +119,16 @@ void EventLoop::quit()
     }
 }
 
-// 在当前loop中执行cb
-void EventLoop::runInLoop(Functor cb)
-{
-    if (isInLoopThread()) // 当前EventLoop中执行回调
-    {
+// 在事件循环所属线程中立即执行回调，否则将回调加入队列
+void EventLoop::runInLoop(Functor cb) {
+    if (isInLoopThread()) {
         cb();
-    }
-    else // 在非当前EventLoop线程中执行cb，就需要唤醒EventLoop所在线程执行cb
-    {
+    } else {
         queueInLoop(cb);
     }
 }
 
-// 把cb放入队列中 唤醒loop所在的线程执行cb
+// 将回调加入队列，并根据需要唤醒事件循环线程
 void EventLoop::queueInLoop(Functor cb)
 {
     {
@@ -148,12 +141,14 @@ void EventLoop::queueInLoop(Functor cb)
      * 唤醒相应的需要执行上面回调操作的loop的线程 让loop()下一次poller_->poll()不再阻塞（阻塞的话会延迟前一次新加入的回调的执行），然后
      * 继续执行pendingFunctors_中的回调函数
      **/
+    // 如果当前不在事件循环线程或正在执行回调，则唤醒事件循环线程
     if (!isInLoopThread() || callingPendingFunctors_)
     {
-        wakeup(); // 唤醒loop所在线程
+        wakeup();
     }
 }
 
+// 处理唤醒事件，读取 eventfd 数据，清除唤醒信号
 void EventLoop::handleRead()
 {
     uint64_t one = 1;

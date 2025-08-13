@@ -2,9 +2,9 @@
 
 ## 项目介绍
 
-本项目是参考 muduo 实现的基于 多Reactor 模型的多线程网络库。使用 C++ 11 编写去除 muduo 对 boost 的依赖。
+本项目是参考 muduo 实现的基于 多Reactor 模型的多线程网络库。
 
-项目已经实现了 Channel 模块、Poller 模块、事件循环模块、日志模块、线程池模块、一致性哈希轮询算法。
+项目已经实现了 事件轮询和分发模块（包括 Channel 模块、Poller 模块、事件循环模块）、日志模块、线程池模块、一致性哈希轮询算法。
 
 ## 开发环境
 
@@ -24,6 +24,8 @@
 3. 扩展性好，可以方便通过增加 Reactor 实例个数充分利用 CPU 资源；
 4. 复用性好，Reactor 模型本身与具体事件处理逻辑无关，具有很高的复用性；
 
+
+
 ## 构建项目
 
 安装基本工具
@@ -34,7 +36,6 @@ sudo yum install -y wget cmake gcc-c++ make unzip git
 ```
 
 ## 编译指令
-
 
 进入到muduo-lite文件
 ```shell
@@ -56,13 +57,28 @@ cmake .. && make -j${nproc}
 cd example  &&  ./testserver
 ```
 
-
 ## 功能介绍
 
-- **事件轮询与分发模块**：`EventLoop.*`、`Channel.*`、`Poller.*`、`EPollPoller.*`负责事件轮询检测，并实现事件分发处理。`EventLoop`对`Poller`进行轮询，`Poller`底层由`EPollPoller`实现。
-- **线程与事件绑定模块**：`Thread.*`、`EventLoopThread.*`、`EventLoopThreadPool.*`绑定线程与事件循环，完成`one loop per thread`模型。
-- **网络连接模块**：`TcpServer.*`、`TcpConnection.*`、`Acceptor.*`、`Socket.*`实现`mainloop`对网络连接的响应，并分发到各`subloop`。
-- **缓冲区模块**：`Buffer.*`提供自动扩容缓冲区，保证数据有序到达。
+#### 事件轮询与分发模块
+
+`EventLoop.*`、`Channel.*`、`Poller.*`、`EPollPoller.*`负责事件轮询检测，并实现事件分发处理。`EventLoop`对`Poller`进行轮询，`Poller`底层由`EPollPoller`实现。
+
+- **EventLoop、Channel 和 Poller 之间的关系：**
+1. `one loop per thread`: 一个线程对应一个事件循环
+2. 一个事件循环持有一个 `Poller` 和多个 `Channel`，通过不断循环调用 `Poller` 的 `poll` 方法，获取活跃的Channel，并分发事件
+3. 一个`Poller`对应一个`epoll`实例，里面封装了 `epoll/poll/select` 等底层 IO 复用机制，负责管理所有注册的   `Channel`，监听它们的事件，当有事件发生时，将活跃的`Channel`返回给`EventLoop`，由后者分发处理。
+4. 一个`Channel`风状态一个`fd`以及关注的事件类型，负责绑定各种事件的回调函数。
+
+#### 线程池模块
+
+`Thread.*`、`EventLoopThread.*`、`EventLoopThreadPool.*`绑定线程与事件循环，完成`one loop per thread`模型。
+
+#### 网络连接模块
+
+`TcpServer.*`、`TcpConnection.*`、`Acceptor.*`、`Socket.*`实现`mainloop`对网络连接的响应，并分发到各`subloop`。
+
+#### 缓冲区模块
+`Buffer.*`提供自动扩容缓冲区，保证数据有序到达。
 
 ## 技术亮点
 

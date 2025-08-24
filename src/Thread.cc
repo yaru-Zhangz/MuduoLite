@@ -17,13 +17,14 @@ Thread::Thread(ThreadFunc func, const std::string &name)
 
 Thread::~Thread()
 {
+    // 析构时如果线程已启动但未 join，则分离线程，避免资源泄漏
     if (started_ && !joined_)
     {
-        thread_->detach();                                                  // thread类提供了设置分离线程的方法 线程运行后自动销毁（非阻塞）
+        thread_->detach();                                              
     }
 }
 
-void Thread::start()                                                        // 一个Thread对象 记录的就是一个新线程的详细信息
+void Thread::start()                                                     
 {
     started_ = true;
     sem_t sem;

@@ -27,13 +27,13 @@ public:
     static int numCreated() { return numCreated_; }
 
 private:
-    void setDefaultName();
+    void setDefaultName();                  // 设置默认线程名称
 
-    bool started_;
-    bool joined_;
-    std::shared_ptr<std::thread> thread_;
-    pid_t tid_;       // 在线程创建时再绑定
-    ThreadFunc func_; // 线程回调函数
-    std::string name_;
-    static std::atomic_int numCreated_;
+    bool started_;                          // 标记线程是否已启动
+    bool joined_;                           // 标记线程是否已 join
+    std::shared_ptr<std::thread> thread_;   // 智能指针管理 std::thread 对象
+    pid_t tid_;                             // 线程 id，在线程创建后绑定
+    ThreadFunc func_;                       // 线程执行的回调函数
+    std::string name_;                      // 线程名称
+    static std::atomic_int numCreated_;     // 已创建线程总数，原子操作保证线程安全
 };

@@ -40,8 +40,15 @@ public:
 
     // 判断当前代码是否运行在事件循环所属线程，保证线程安全
     bool isInLoopThread() const { return threadId_ == CurrentThread::tid(); }
-
+    void assertInLoopThread()
+    {
+        if (!isInLoopThread())
+        {
+        abortNotInLoopThread();
+        }
+    }
 private:
+    void abortNotInLoopThread();
     void handleRead();        // 处理 eventfd 读事件，响应唤醒操作
     void doPendingFunctors(); // 执行队列中的所有待处理回调
 

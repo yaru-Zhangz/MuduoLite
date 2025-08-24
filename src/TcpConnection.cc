@@ -60,14 +60,17 @@ TcpConnection::~TcpConnection()
 
 void TcpConnection::send(const std::string &buf)
 {
+    // 只有在连接已建立时才允许发送数据
     if (state_ == kConnected)
     {
-        if (loop_->isInLoopThread()) // 这种是对于单个reactor的情况 用户调用conn->send时 loop_即为当前线程
+        // 如果当前线程就是事件循环线程，直接发送
+        if (loop_->isInLoopThread())
         {
             sendInLoop(buf.c_str(), buf.size());
         }
         else
         {
+            // 否则将发送操作投递到事件循环线程中执行
             loop_->runInLoop(
                 std::bind(&TcpConnection::sendInLoop, this, buf.c_str(), buf.size()));
         }
@@ -149,34 +152,37 @@ void TcpConnection::shutdown()
     }
 }
 
+// 在事件循环线程中执行关闭写端操作
 void TcpConnection::shutdownInLoop()
 {
-    if (!channel_->isWriting()) // 说明当前outputBuffer_的数据全部向外发送完成
+    // 只有当所有数据都已发送完毕时才真正关闭写端
+    if (!channel_->isWriting())
     {
         socket_->shutdownWrite();
     }
 }
 
+
 // 连接建立
 void TcpConnection::connectEstablished()
 {
     setState(kConnected);
-    channel_->tie(shared_from_this());
-    channel_->enableReading(); // 向poller注册channel的EPOLLIN读事件
+    channel_->tie(shared_from_this()); // 绑定生命周期，防止回调时对象被销毁
+    channel_->enableReading();         // 注册读事件
 
-    // 新连接建立 执行回调
-    connectionCallback_(shared_from_this());
+    connectionCallback_(shared_from_this()); // 执行连接建立回调
 }
+
 // 连接销毁
 void TcpConnection::connectDestroyed()
 {
     if (state_ == kConnected)
     {
         setState(kDisconnected);
-        channel_->disableAll(); // 把channel的所有感兴趣的事件从poller中删除掉
+        channel_->disableAll(); // 移除所有事件监听
         connectionCallback_(shared_from_this());
     }
-    channel_->remove(); // 把channel从poller中删除掉
+    channel_->remove(); // 从事件循环中移除通道
 }
 
 // 读是相对服务器而言的 当对端客户端有数据到达 服务器端检测到EPOLLIN 就会触发该fd上的回调 handleRead取读走对端发来的数据

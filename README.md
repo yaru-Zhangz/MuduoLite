@@ -61,13 +61,13 @@ cd example  &&  ./testserver
 
 #### 事件轮询与分发模块
 
-`EventLoop.*`、`Channel.*`、`Poller.*`、`EPollPoller.*`负责事件轮询检测，并实现事件分发处理。`EventLoop`对`Poller`进行轮询，`Poller`底层由`EPollPoller`实现。
+EventLoop负责事件循环和分发，Poller负责底层事件监测和Channel管理，Channel负责封装fd和感兴趣的事件，并与回调进行绑定。
 
 - **EventLoop、Channel 和 Poller 之间的关系：**
 1. `one loop per thread`: 一个线程对应一个事件循环
 2. 一个事件循环持有一个 `Poller` 和多个 `Channel`，通过不断循环调用 `Poller` 的 `poll` 方法，获取活跃的Channel，并分发事件
 3. 一个`Poller`对应一个`epoll`实例，里面封装了 `epoll/poll/select` 等底层 IO 复用机制，负责管理所有注册的   `Channel`，监听它们的事件，当有事件发生时，将活跃的`Channel`返回给`EventLoop`，由后者分发处理。
-4. 一个`Channel`风状态一个`fd`以及关注的事件类型，负责绑定各种事件的回调函数。
+4. 一个`Channel`封装一个`fd`以及关注的事件类型，负责绑定各种事件的回调函数。
 
 #### 线程池模块
 

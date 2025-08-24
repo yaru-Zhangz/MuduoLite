@@ -22,9 +22,10 @@ EventLoopThread::~EventLoopThread()
     }
 }
 
+// 启动线程，等待 EventLoop 创建完成并返回其指针
 EventLoop *EventLoopThread::startLoop()
 {
-    thread_.start(); // 启用底层线程Thread类对象thread_中通过start()创建的线程
+    thread_.start(); // 启动底层线程
 
     EventLoop *loop = nullptr;
     {
@@ -35,22 +36,23 @@ EventLoop *EventLoopThread::startLoop()
     return loop;
 }
 
-// 下面这个方法 是在单独的新线程里运行的
+// 线程主函数，在新线程中创建和运行 EventLoop
 void EventLoopThread::threadFunc()
 {
-    EventLoop loop; // 创建一个独立的EventLoop对象 和上面的线程是一一对应的 级one loop per thread
+    EventLoop loop; // 创建独立的 EventLoop 实例
 
     if (callback_)
     {
-        callback_(&loop);
+        callback_(&loop); // 如果有初始化回调，先执行
     }
 
     {
         std::unique_lock<std::mutex> lock(mutex_);
-        loop_ = &loop;
+        loop_ = &loop;           // 设置 loop_ 指针，通知主线程 EventLoop 已创建
         cond_.notify_one();
     }
-    loop.loop();    // 执行EventLoop的loop() 开启了底层的Poller的poll()
+    loop.loop();    // 启动事件循环，进入 Poller 的 poll 流程
+
     std::unique_lock<std::mutex> lock(mutex_);
-    loop_ = nullptr;
+    loop_ = nullptr; // 事件循环结束后，清空 loop_ 指针
 }

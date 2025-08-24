@@ -9,6 +9,10 @@
 class EventLoop;
 class InetAddress;
 
+/*
+acceptor专门负责监听服务器段的监听socket，当有新的客户端连接到来时，负责接收连接并将新连接的文件描述符
+和对端地址传递给上层
+*/
 class Acceptor : noncopyable
 {
 public:
@@ -16,19 +20,18 @@ public:
 
     Acceptor(EventLoop *loop, const InetAddress &listenAddr, bool reuseport);
     ~Acceptor();
-    //设置新连接的回调函数
+
     void setNewConnectionCallback(const NewConnectionCallback &cb) { NewConnectionCallback_ = cb; }
-    // 判断是否在监听
-    bool listenning() const { return listenning_; }
-    // 监听本地端口
-    void listen();
+    bool listenning() const { return listenning_; } // 查询是否正在监听
+    void listen(); // 启动监听
+
 
 private:
-    void handleRead();//处理新用户的连接事件
+    void handleRead(); // 处理新连接到来的事件
 
-    EventLoop *loop_; // Acceptor用的就是用户定义的那个baseLoop 也称作mainLoop
-    Socket acceptSocket_;//专门用于接收新连接的socket
-    Channel acceptChannel_;//专门用于监听新连接的channel
-    NewConnectionCallback NewConnectionCallback_;//新连接的回调函数
-    bool listenning_;//是否在监听
+    EventLoop *loop_;           // 事件循环对象指针
+    Socket acceptSocket_;       // 用于监听新连接的 socket
+    Channel acceptChannel_;     // 用于监听 socket 上的事件
+    NewConnectionCallback NewConnectionCallback_; // 新连接到来时的回调函数
+    bool listenning_;           // 标记是否正在监听
 };

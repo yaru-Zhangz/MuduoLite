@@ -186,6 +186,12 @@ bool EventLoop::hasChannel(Channel *channel)
     return poller_->hasChannel(channel);
 }
 
+void EventLoop::abortNotInLoopThread()
+{
+  LOG_FATAL("EventLoop::abortNotInLoopThread - EventLoop was created in threadId = %d, current thread id = %d",
+              static_cast<int>(threadId_), static_cast<int>(CurrentThread::tid()));
+}
+
 void EventLoop::doPendingFunctors()
 {
     std::vector<Functor> functors;

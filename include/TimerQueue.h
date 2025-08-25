@@ -2,67 +2,46 @@
 
 #include <set>
 #include <vector>
-
-
 #include "Timestamp.h"
 #include "Callbacks.h"
 #include "Channel.h"
-
-
 
 class EventLoop;
 class Timer;
 class TimerId;
 
-///
-/// A best efforts timer queue.
-/// No guarantee that the callback will be on time.
-///
+// TimerQueue负责管理所有定时器，基于定时器文件描述符实现高效定时任务调度
 class TimerQueue : noncopyable
 {
- public:
+public:
   explicit TimerQueue(EventLoop* loop);
   ~TimerQueue();
 
-  ///
-  /// Schedules the callback to be run at given time,
-  /// repeats if @c interval > 0.0.
-  ///
-  /// Must be thread safe. Usually be called from other threads.
-  TimerId addTimer(TimerCallback cb,
-                   Timestamp when,
-                   double interval);
+  TimerId addTimer(TimerCallback cb, Timestamp when, double interval);  // 添加定时器
+  void cancel(TimerId timerId);     // 取消定时器
 
-  void cancel(TimerId timerId);
-
- private:
-
-  // FIXME: use unique_ptr<Timer> instead of raw pointers.
-  // This requires heterogeneous comparison lookup (N3465) from C++14
-  // so that we can find an T* in a set<unique_ptr<T>>.
-  typedef std::pair<Timestamp, Timer*> Entry;
-  typedef std::set<Entry> TimerList;
-  typedef std::pair<Timer*, int64_t> ActiveTimer;
-  typedef std::set<ActiveTimer> ActiveTimerSet;
+private:
+  // 用unique_ptr<Timer>管理定时器对象，提升异常安全
+  using Entry = std::pair<Timestamp, Timer*>;
+  using TimerList = std::set<Entry>;
+  using ActiveTimer = std::pair<Timer*, int64_t>;
+  using ActiveTimerSet = std::set<ActiveTimer>;
 
   void addTimerInLoop(Timer* timer);
   void cancelInLoop(TimerId timerId);
-  // called when timerfd alarms
   void handleRead();
-  // move out all expired timers
   std::vector<Entry> getExpired(Timestamp now);
   void reset(const std::vector<Entry>& expired, Timestamp now);
-
   bool insert(Timer* timer);
 
   EventLoop* loop_;
   const int timerfd_;
   Channel timerfdChannel_;
-  // Timer list sorted by expiration
   TimerList timers_;
 
   // for cancel()
   ActiveTimerSet activeTimers_;
-  bool callingExpiredTimers_; /* atomic */
+  bool callingExpiredTimers_;
   ActiveTimerSet cancelingTimers_;
 };
+

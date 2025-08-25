@@ -1,4 +1,4 @@
-# muduo-core
+# muduo-lite
 
 ## 项目介绍
 

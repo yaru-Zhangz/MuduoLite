@@ -2,29 +2,28 @@
 #include <cstdint>
 
 class Timer;
-
+// 用于唯一标识一个定时器实例
 class TimerId
 {
- public:
- TimerId() = default;
-  TimerId()
-    : timer_(nullptr),
-      sequence_(0)
-  {
-  }
+public:
+    TimerId()
+        : timer_(nullptr)
+        , sequence_(0)
+    {
+    }
 
-  TimerId(Timer* timer, int64_t seq)
-    : timer_(timer),
-      sequence_(seq)
-  {
-  }
-  ~TimerId() = default;
+    TimerId(Timer* timer, int64_t seq)
+        : timer_(timer)
+        , sequence_(seq)
+    {
+    }
+    ~TimerId() = default;
 
-  friend class TimerQueue;
+    friend class TimerQueue;
 
- private:
-  Timer* timer_;
-  int64_t sequence_;
+private:
+    Timer* timer_;          // 指向实际定时器对象的指针
+    int64_t sequence_;      // 定时器的唯一序号
 };
 
 

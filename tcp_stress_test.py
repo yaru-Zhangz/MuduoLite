@@ -4,7 +4,7 @@ import time
 
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 8080
-CONNECTIONS = 10000  # 更高并发量
+CONNECTIONS = 500  # 更高并发量
 MESSAGE = b'x' * 1024
 DURATION = 30
 

@@ -27,10 +27,13 @@ void EventLoopThreadPool::start(const ThreadInitCallback &cb)
     {
         char buf[name_.size() + 32];
         snprintf(buf, sizeof buf, "%s%d", name_.c_str(), i); // 生成线程名称
-        EventLoopThread *t = new EventLoopThread(cb, buf);   // 创建事件循环线程
+        std::string threadName(buf);
+        EventLoopThread *t = new EventLoopThread(cb, threadName);   // 创建事件循环线程
         threads_.push_back(std::unique_ptr<EventLoopThread>(t)); // 保存线程对象
-        loops_.push_back(t->startLoop()); // 启动线程并获取 EventLoop 指针
-        hash_.addNode(buf);               // 将线程名称加入一致性哈希
+        EventLoop* loop = t->startLoop(); // 启动线程并获取 EventLoop 指针
+        loops_.push_back(loop);
+        hash_.addNode(threadName);               // 将线程名称加入一致性哈希
+        threadNameToLoop_[threadName] = loop;    // 记录线程名到EventLoop*的映射
     }
 
     // 如果线程数为0，仅有主事件循环，且有初始化回调则执行
@@ -43,13 +46,14 @@ void EventLoopThreadPool::start(const ThreadInitCallback &cb)
 // 根据 key 用一致性哈希分配一个 EventLoop（如分配连接到某个线程）
 EventLoop *EventLoopThreadPool::getNextLoop(const std::string &key)
 {
-    size_t index = hash_.getNode(key); // 获取分配的索引
-    if (index >= loops_.size())
-    {
+    std::string threadName = hash_.getNode(key); // 获取分配的线程名
+    auto it = threadNameToLoop_.find(threadName);
+    if (it != threadNameToLoop_.end()) {
+        return it->second;
+    } else {
         LOG_ERROR("EventLoopThreadPool::getNextLoop ERROR");
-        return baseLoop_; // 索引越界时返回主事件循环
+        return baseLoop_;
     }
-    return loops_[index]; // 返回分配的 EventLoop
 }
 
 

@@ -96,6 +96,11 @@ EventLoop负责事件循环和分发，Poller负责底层事件监测和Channel�
 
 #### 定时器模块
 
-主要由 `Timer.\*、TimerId.\*、TimerQueue.\*和 Timestamp.\* 组成。
+主要由 Timer.\*、TimerId.\*、TimerQueue.\*和 Timestamp.\* 组成。
 
 `Timer`表示单个定时任务，`TimerId`用于唯一标识一个定时器，`TimerQueue`管理所有定时器对象，当`timerfd`到期时，`TimerQueue`负责读取`timerfd`，批量取出所有到期定时器，依次执行回调，并对周期性定时器重启。
+
+## 参考资料
+- muduo网络库源码：https://github.com/chenshuo/muduo
+- 一致性哈希算法：https://www.bilibili.com/video/BV1FJ4m1e7Sz/?spm_id_from=333.337.search-card.all.click&vd_source=5eae1b2580d836bc51a9f4cb2fb7ad10
+- 

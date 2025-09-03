@@ -39,4 +39,5 @@ private:
     std::vector<std::unique_ptr<EventLoopThread>> threads_;//IO线程的列表
     std::vector<EventLoop *> loops_;//线程池中EventLoop的列表，指向的是EVentLoopThread线程函数创建的EventLoop对象。
     ConsistentHash hash_; // 一致性哈希对象
+    std::unordered_map<std::string, EventLoop*> threadNameToLoop_; // 线程名到EventLoop*的映射
 };
